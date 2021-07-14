@@ -2,7 +2,7 @@ menu "esp32-solar-c Configuration"
 	config ONE_WIRE_GPIO
 		int "OneWire GPIO number"
 		range 0 33
-		default 4
+		default 33
 		help
 			GPIO number (IOxx) to access One Wire Bus.
 

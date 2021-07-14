@@ -1,27 +1,3 @@
-/*
- * MIT License
- *
- * Copyright (c) 2017 David Antliff
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -58,7 +34,7 @@
 #define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_12_BIT)
 #define NO_OF_SAMPLES        64        // Multisampling
 #define SAMPLE_PERIOD        (30000)   // milliseconds
-#define DEFAULT_VREF         1100
+#define DEFAULT_VREF         3300      // should this be 1100? readings seemed low at that value
 #define CONFIG_EXAMPLE_WIFI_SSID     (CONFIG_ESP32_WIFI_SSID)
 #define CONFIG_EXAMPLE_WIFI_PASSWORD (CONFIG_ESP32_WIFI_PASSWORD)
 
@@ -83,8 +59,7 @@ float acs712_voltage_to_current(uint32_t v) {
 }
 
 
-void app_main()
-{
+void app_main() {
 	// Application/System Setup
 	ESP_ERROR_CHECK(nvs_flash_init());
 	ESP_ERROR_CHECK(esp_netif_init());
@@ -109,6 +84,7 @@ void app_main()
 	adc1_config_channel_atten(channel, atten);
 	// Characterize ADC
 	adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+	esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
 
 
 	// OneWire/DS18B20
@@ -269,18 +245,23 @@ void app_main()
 			uint32_t adc_reading = 0;
 			//Multisampling
 			for (int i = 0; i < NO_OF_SAMPLES; i++) {
-					if (unit == ADC_UNIT_1) {
-							adc_reading += adc1_get_raw((adc1_channel_t)channel);
-					} else {
-							int raw;
-							adc2_get_raw((adc2_channel_t)channel, width, &raw);
-							adc_reading += raw;
-					}
+				if (unit == ADC_UNIT_1) {
+					adc_reading += adc1_get_raw((adc1_channel_t)channel);
+				} else {
+					int raw;
+					adc2_get_raw((adc2_channel_t)channel, width, &raw);
+					adc_reading += raw;
+				}
 			}
 			adc_reading /= NO_OF_SAMPLES;
 			uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
 			float current = acs712_voltage_to_current(voltage);
-			ESP_LOGI(TAG, "ADC readings: %dmV, %fA\n", voltage, current);
+			char s_current[8];  // TODO: figure out what size this should be
+			char mq_topic_current[128]; // TODO: figure out size of this char array
+			sprintf(s_current, "%.2f", current);
+			sprintf(mq_topic_current, "%s-%s/current_a", MQ_TOPIC_BASE, s_mac);
+			int msg_id = esp_mqtt_client_publish(client, mq_topic_current, s_current, 0, 0, 0);
+			ESP_LOGI(TAG, "MQTT published - topic:%s, payload:%s, id:%i", mq_topic_current, s_current, msg_id);
 
 			vTaskDelayUntil(&last_wake_time, SAMPLE_PERIOD / portTICK_PERIOD_MS);
 		}
