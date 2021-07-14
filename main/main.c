@@ -38,7 +38,6 @@
 #define CONFIG_EXAMPLE_WIFI_SSID     (CONFIG_ESP32_WIFI_SSID)
 #define CONFIG_EXAMPLE_WIFI_PASSWORD (CONFIG_ESP32_WIFI_PASSWORD)
 
-// ADC
 static esp_adc_cal_characteristics_t *adc_chars;
 static const adc_channel_t current_channel = ADC_CHANNEL_6;         // ADC1 CH6 == GPIO34
 static const adc_channel_t voltage_channel = ADC_CHANNEL_7; // ADC1 CH7 == GPIO35
@@ -47,7 +46,7 @@ static const adc_atten_t atten = ADC_ATTEN_DB_0;
 static const adc_unit_t unit = ADC_UNIT_1;
 
 // TODO: OneWire & ADC Tags
-char *TAG = "ESP-DS18B20-C";
+static const char *TAG = "ESP-SOLAR";
 char *MQ_TOPIC_BASE = "iot/esp32";
 
 float acs712_voltage_to_current(uint32_t v) {
@@ -87,17 +86,6 @@ void app_main() {
 	// Characterize ADC
 	adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
 	esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
-
-	// test vref
-	esp_err_t status = adc_vref_to_gpio(ADC_UNIT_1, GPIO_NUM_25);
-	if (status == ESP_OK) {
-			printf("v_ref routed to GPIO\n");
-	} else {
-			printf("failed to route v_ref\n");
-	}
-
-
-
 
 	// OneWire/DS18B20
 	// Stable readings require a brief period before communication
