@@ -40,11 +40,13 @@
 
 // ADC
 static esp_adc_cal_characteristics_t *adc_chars;
-static const adc_channel_t channel = ADC_CHANNEL_6;     //GPIO34 if ADC1, GPIO14 if ADC2
+static const adc_channel_t current_channel = ADC_CHANNEL_6;         // ADC1 CH6 == GPIO34
+static const adc_channel_t voltage_channel = ADC_CHANNEL_7; // ADC1 CH7 == GPIO35
 static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
 static const adc_atten_t atten = ADC_ATTEN_DB_0;
 static const adc_unit_t unit = ADC_UNIT_1;
 
+// TODO: OneWire & ADC Tags
 char *TAG = "ESP-DS18B20-C";
 char *MQ_TOPIC_BASE = "iot/esp32";
 
@@ -57,7 +59,6 @@ float acs712_voltage_to_current(uint32_t v) {
 	}
 	return ((int)v - 2500) / acs712_sens_mv_a;
 }
-
 
 void app_main() {
 	// Application/System Setup
@@ -74,14 +75,15 @@ void app_main() {
 	// get MAC addr to use as "unique" identifier
 	uint8_t mac_i[6] = {0};
 	esp_read_mac(mac_i, ESP_MAC_WIFI_STA);
-	ESP_LOGI(TAG, "%02X%02X%02X%02X%02X%02X", mac_i[0], mac_i[1], mac_i[2], mac_i[3], mac_i[4], mac_i[5]);
+	ESP_LOGI(TAG, "MAC Address: %02X%02X%02X%02X%02X%02X", mac_i[0], mac_i[1], mac_i[2], mac_i[3], mac_i[4], mac_i[5]);
 	char s_mac[13];  // 12 chars + 1 for nul
 	sprintf(s_mac, "%02X%02X%02X%02X%02X%02X", mac_i[0], mac_i[1], mac_i[2], mac_i[3], mac_i[4], mac_i[5]);
 
 	// ADC setup
 	// Check if Two Point or Vref are burned into eFuse
 	adc1_config_width(width);
-	adc1_config_channel_atten(channel, atten);
+	adc1_config_channel_atten(current_channel, atten);
+	adc1_config_channel_atten(voltage_channel, atten);
 	// Characterize ADC
 	adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
 	esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
@@ -96,7 +98,7 @@ void app_main() {
 	owb = owb_rmt_initialize(&rmt_driver_info, GPIO_DS18B20_0, RMT_CHANNEL_1, RMT_CHANNEL_0);
 	owb_use_crc(owb, true);  // enable CRC check for ROM code
 	// Find all connected devices
-	ESP_LOGI(TAG, "Find devices");
+	ESP_LOGI(TAG, "Find OneWire devices");
 	OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
 	int num_devices = 0;
 	OneWireBus_SearchState search_state = {0};
@@ -113,12 +115,11 @@ void app_main() {
 	{
 		char rom_code_s[17];
 		owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
-		ESP_LOGI(TAG, "  %d : %s", num_devices, rom_code_s);
+		ESP_LOGI(TAG, "OneWire Device Found -  id:%d, rom_code:%s", num_devices, rom_code_s);
 		device_rom_codes[num_devices] = search_state.rom_code;
 		++num_devices;
 		owb_search_next(owb, &search_state, &found);
 	}
-	ESP_LOGI(TAG, "Found %d device%s", num_devices, num_devices == 1 ? "" : "s");
 
 	// In this example, if a single device is present, then the ROM code is probably
 	// not very interesting, so just print it out. If there are multiple devices,
@@ -233,35 +234,48 @@ void app_main() {
 				// ESP_LOGI(TAG, "  %d: %.1f    %d errors", i, readings[i], errors_count[i]);
 				float temp_f = (readings[i] * 9 / 5) + 32;
 				char s_temp_f[8];  // TODO: figure out what size this should be
-				sprintf(s_temp_f, "%.2f", temp_f);
 				char mq_topic_temp_f[128]; // TODO: figure out size of this char array
+				sprintf(s_temp_f, "%.2f", temp_f);
 				sprintf(mq_topic_temp_f, "%s-%s-%i/temperature_f", MQ_TOPIC_BASE, s_mac, i);
 				// publish MQTT message(s)
 				int temp_f_msg_id = esp_mqtt_client_publish(client, mq_topic_temp_f, s_temp_f, 0, 0, 0);
 				ESP_LOGI(TAG, "MQTT published - topic:%s, payload:%s, id:%i", mq_topic_temp_f, s_temp_f, temp_f_msg_id);
 			}
 
-			// ADC Reading
-			uint32_t adc_reading = 0;
+			// ADC Readings
+			uint32_t adc_current_reading = 0;
+			uint32_t adc_voltage_reading = 0;
 			//Multisampling
 			for (int i = 0; i < NO_OF_SAMPLES; i++) {
 				if (unit == ADC_UNIT_1) {
-					adc_reading += adc1_get_raw((adc1_channel_t)channel);
+					adc_current_reading += adc1_get_raw((adc1_channel_t)current_channel);
+					adc_voltage_reading += adc1_get_raw((adc1_channel_t)voltage_channel);
 				} else {
-					int raw;
-					adc2_get_raw((adc2_channel_t)channel, width, &raw);
-					adc_reading += raw;
+					int current_raw;
+					int voltage_raw;
+					adc2_get_raw((adc2_channel_t)current_channel, width, &current_raw);
+					adc2_get_raw((adc2_channel_t)voltage_channel, width, &voltage_raw);
+					adc_current_reading += current_raw;
+					adc_voltage_reading += voltage_raw;
 				}
 			}
-			adc_reading /= NO_OF_SAMPLES;
-			uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
-			float current = acs712_voltage_to_current(voltage);
+			adc_current_reading /= NO_OF_SAMPLES;
+			adc_voltage_reading /= NO_OF_SAMPLES;
+			uint32_t adc_current_v = esp_adc_cal_raw_to_voltage(adc_current_reading, adc_chars);
+			uint32_t adc_voltage_v = esp_adc_cal_raw_to_voltage(adc_voltage_reading, adc_chars);
 			char s_current[8];  // TODO: figure out what size this should be
-			char mq_topic_current[128]; // TODO: figure out size of this char array
+			char s_voltage[8];  // TODO: figure out what size this should be
+			char mq_current_topic[128]; // TODO: figure out size of this char array
+			char mq_voltage_topic[128]; // TODO: figure out size of this char array
+			float current = acs712_voltage_to_current(adc_current_v);
 			sprintf(s_current, "%.2f", current);
-			sprintf(mq_topic_current, "%s-%s/current_a", MQ_TOPIC_BASE, s_mac);
-			int msg_id = esp_mqtt_client_publish(client, mq_topic_current, s_current, 0, 0, 0);
-			ESP_LOGI(TAG, "MQTT published - topic:%s, payload:%s, id:%i", mq_topic_current, s_current, msg_id);
+			sprintf(s_voltage, "%d", adc_voltage_v);
+			sprintf(mq_current_topic, "%s-%s/current_a", MQ_TOPIC_BASE, s_mac);
+			sprintf(mq_voltage_topic, "%s-%s/voltage_mv", MQ_TOPIC_BASE, s_mac);
+			esp_mqtt_client_publish(client, mq_current_topic, s_current, 0, 0, 0);
+			esp_mqtt_client_publish(client, mq_voltage_topic, s_voltage, 0, 0, 0);
+			ESP_LOGI(TAG, "MQTT published - topic:%s, payload:%s", mq_current_topic, s_current);
+			ESP_LOGI(TAG, "MQTT published - topic:%s, payload:%s", mq_voltage_topic, s_voltage);
 
 			vTaskDelayUntil(&last_wake_time, SAMPLE_PERIOD / portTICK_PERIOD_MS);
 		}
