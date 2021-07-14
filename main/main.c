@@ -10,14 +10,6 @@
 #include "mqtt_client.h"
 #include "protocol_examples_common.h"
 
-#include "owb.h"
-#include "owb_rmt.h"
-#include "ds18b20.h"
-
-#define GPIO_DS18B20_0       (CONFIG_ONE_WIRE_GPIO)
-#define MAX_DEVICES          (8)
-#define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_12_BIT)
-
 #define DEFAULT_VREF    3300        // Use adc2_vref_to_gpio() to obtain a better estimate
 #define NO_OF_SAMPLES   64          // Multisampling
 #define SAMPLE_RATE     5000        // Milliseconds
@@ -29,7 +21,6 @@ static const adc_atten_t atten = ADC_ATTEN_DB_0;
 static const adc_unit_t unit = ADC_UNIT_1;
 
 static const char *TAG = "ESP-SOLAR";
-static const char *MQ_TOPIC_BASE = "iot/esp32";
 
 float acs712_voltage_to_current(uint32_t v) {
   const int acs712_offset_mv = 2500;  // 2.5V == 0A
@@ -65,6 +56,7 @@ void app_main(void)
     adc1_config_channel_atten(channel, atten);
     // Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+    esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
 
     // main loop
     for (;;) {
