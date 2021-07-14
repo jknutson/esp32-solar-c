@@ -88,6 +88,16 @@ void app_main() {
 	adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
 	esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
 
+	// test vref
+	esp_err_t status = adc_vref_to_gpio(ADC_UNIT_1, GPIO_NUM_25);
+	if (status == ESP_OK) {
+			printf("v_ref routed to GPIO\n");
+	} else {
+			printf("failed to route v_ref\n");
+	}
+
+
+
 
 	// OneWire/DS18B20
 	// Stable readings require a brief period before communication
