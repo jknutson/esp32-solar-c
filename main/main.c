@@ -35,11 +35,9 @@
 #define NO_OF_SAMPLES        64        // Multisampling
 #define SAMPLE_PERIOD        (30000)   // milliseconds
 #define DEFAULT_VREF         3300      // should this be 1100? readings seemed low at that value
-#define CONFIG_EXAMPLE_WIFI_SSID     (CONFIG_ESP32_WIFI_SSID)
-#define CONFIG_EXAMPLE_WIFI_PASSWORD (CONFIG_ESP32_WIFI_PASSWORD)
 
 static esp_adc_cal_characteristics_t *adc_chars;
-static const adc_channel_t current_channel = ADC_CHANNEL_6;         // ADC1 CH6 == GPIO34
+static const adc_channel_t current_channel = ADC_CHANNEL_6; // ADC1 CH6 == GPIO34
 static const adc_channel_t voltage_channel = ADC_CHANNEL_7; // ADC1 CH7 == GPIO35
 static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
 static const adc_atten_t atten = ADC_ATTEN_DB_0;
@@ -270,6 +268,7 @@ void app_main() {
 			sprintf(s_voltage, "%d", adc_voltage_v);
 			sprintf(mq_current_topic, "%s-%s/current_a", MQ_TOPIC_BASE, s_mac);
 			sprintf(mq_voltage_topic, "%s-%s/voltage_mv", MQ_TOPIC_BASE, s_mac);
+			// TODO: it seems that either these pins are tied together on my board, or there is a bug reporting the same reading for both
 			esp_mqtt_client_publish(client, mq_current_topic, s_current, 0, 0, 0);
 			esp_mqtt_client_publish(client, mq_voltage_topic, s_voltage, 0, 0, 0);
 			ESP_LOGI(TAG, "MQTT published - topic:%s, payload:%s", mq_current_topic, s_current);

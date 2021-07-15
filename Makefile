@@ -3,7 +3,13 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := esp32-solar-c
+# PROJECT_NAME := esp32-solar-c
 
-include $(IDF_PATH)/make/project.mk
+# include $(IDF_PATH)/make/project.mk
+.PHONY: build
 
+monitor:
+	@idf.py monitor
+
+build:
+	@ninja -C build build.ninja
