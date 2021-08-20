@@ -66,7 +66,7 @@ void app_main() {
 	ESP_ERROR_CHECK(example_connect());
 	// Override global log level
 	esp_log_level_set("*", ESP_LOG_INFO);
-	// To debug, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
+	// To debug *OWB*, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
 	//esp_log_level_set("owb", ESP_LOG_DEBUG);
 	//esp_log_level_set("ds18b20", ESP_LOG_DEBUG);
 	// get MAC addr to use as "unique" identifier
