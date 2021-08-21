@@ -245,20 +245,28 @@ void app_main() {
 			for (int i = 0; i < NO_OF_SAMPLES; i++) {
 				if (unit == ADC_UNIT_1) {
 					adc_current_reading += adc1_get_raw((adc1_channel_t)current_channel);
+					ESP_LOGD("ADC", "multisample unit1: adc_current_reading: %d", adc_current_reading);
 					adc_voltage_reading += adc1_get_raw((adc1_channel_t)voltage_channel);
+					ESP_LOGD("ADC", "multisample unit1: adc_voltage_reading: %d", adc_voltage_reading);
 				} else {
 					int current_raw;
 					int voltage_raw;
 					adc2_get_raw((adc2_channel_t)current_channel, width, &current_raw);
+					ESP_LOGD("ADC", "multisample unit2: current_raw: %d", current_raw);
 					adc2_get_raw((adc2_channel_t)voltage_channel, width, &voltage_raw);
+					ESP_LOGD("ADC", "multisample unit2: voltage_raw: %d", voltage_raw);
 					adc_current_reading += current_raw;
+					ESP_LOGD("ADC", "multisample unit2: adc_current_reading: %d", adc_current_reading);
 					adc_voltage_reading += voltage_raw;
+					ESP_LOGD("ADC", "multisample unit2: adc_voltage_reading: %d", adc_voltage_reading);
 				}
 			}
 			adc_current_reading /= NO_OF_SAMPLES;
 			adc_voltage_reading /= NO_OF_SAMPLES;
 			uint32_t adc_current_v = esp_adc_cal_raw_to_voltage(adc_current_reading, adc_chars);
 			uint32_t adc_voltage_v = esp_adc_cal_raw_to_voltage(adc_voltage_reading, adc_chars);
+			ESP_LOGI("ADC", "adc_current_v (pin 34): %d", adc_current_reading);
+			ESP_LOGI("ADC", "adc_voltage_v (pin 35): %d", adc_voltage_reading);
 			char s_current[8];  // TODO: figure out what size this should be
 			char s_voltage[8];  // TODO: figure out what size this should be
 			char mq_current_topic[128]; // TODO: figure out size of this char array
