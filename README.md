@@ -62,6 +62,22 @@ for further information about parasitic power mode, including strong pull-up con
 
 ADC1 is used as ADC2 is shared with WiFi, which is used in this application.
 
+### Monitoring
+
+You can use the idf.py tool to interact with and monitor the device:
+
+```
+MQTT Published (polled temperature): yes
+raw voltage:  142 mV
+real voltage:  852 mV
+topic:  esp32/esp32_58EA84/voltage
+MQTT Published (polled voltage): yes
+temperature (c): 23.875000
+temperature (f): 74.975000
+MQTT topic:  esp32/esp32_58EA84-28ffc69ca4160514/temperature
+```
+
+
 ## License
 
 The code in this project is licensed under the MIT license - see LICENSE for details.
