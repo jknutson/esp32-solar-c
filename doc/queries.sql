@@ -11,7 +11,7 @@ MAX(text::float) as max_temperature,
 AVG(text::float) as avg_temperature
 FROM journal
 WHERE RIGHT(topic, 11) = 'temperature'
-AND text::float < 120 AND text::float > -120-- weed out outliers/erroneous readings
+AND text::float < 115 AND text::float > -115-- weed out outliers/erroneous readings
 -- AND DATE(time::timestamp) = DATE(current_date) -- today
 AND DATE(time::timestamp AT TIME ZONE 'cdt') = DATE(current_timestamp - INTERVAL '1 day') -- yesterday
 GROUP BY 1;
@@ -31,9 +31,9 @@ CREATE OR REPLACE FUNCTION wm_update_yesterday_summaries()
       SPLIT_PART(topic, '/', 2) as station
       FROM journal
       WHERE RIGHT(topic, 11) = 'temperature'
-      AND text::float < 120 AND text::float > -120-- weed out outliers/erroneous readings
+      AND text::float < 115 AND text::float > -115-- weed out outliers/erroneous readings
       -- AND DATE(time::timestamp) = DATE(current_date) -- today
-      AND DATE(time::timestamptz AT TIME ZONE 'cdt') = DATE(current_date AT TIME ZONE 'cdt' - INTERVAL '1 day') -- yesterday
+      AND DATE(time::timestamptz AT TIME ZONE 'cdt') = DATE(current_timestamp AT TIME ZONE 'cdt' - INTERVAL '1 day') -- yesterday
       GROUP BY 1,5
       ON CONFLICT("date", station) -- TODO: ensure this will work when we have multiple stations
       DO UPDATE
