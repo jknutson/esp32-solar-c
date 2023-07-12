@@ -13,7 +13,7 @@ FROM journal
 WHERE RIGHT(topic, 11) = 'temperature'
 AND text::float < 120 AND text::float > -120-- weed out outliers/erroneous readings
 -- AND DATE(time::timestamp) = DATE(current_date) -- today
-AND DATE(time::timestamp AT TIME ZONE 'cdt') = DATE(current_date - INTERVAL '1 day') -- yesterday
+AND DATE(time::timestamp AT TIME ZONE 'cdt') = DATE(current_timestamp - INTERVAL '1 day') -- yesterday
 GROUP BY 1;
 
 
