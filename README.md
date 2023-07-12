@@ -70,6 +70,7 @@ The code in this project is licensed under the MIT license - see LICENSE for det
 
  * [DS18B20 Datasheet](http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf)
  * [Espressif IoT Development Framework for ESP32](https://github.com/espressif/esp-idf)
+ * [mqtt-pg-logger](https://github.com/rosenloecher-it/mqtt-pg-logger)
 
 ## Acknowledgements
 
