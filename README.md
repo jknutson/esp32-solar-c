@@ -64,9 +64,10 @@ ADC1 is used as ADC2 is shared with WiFi, which is used in this application.
 
 ### Monitoring
 
-You can use the idf.py tool to interact with and monitor the device:
+You can use the `idf.py` tool to interact with and monitor the device:
 
 ```
+idf.py monitor
 MQTT Published (polled temperature): yes
 raw voltage:  142 mV
 real voltage:  852 mV
@@ -77,6 +78,9 @@ temperature (f): 74.975000
 MQTT topic:  esp32/esp32_58EA84-28ffc69ca4160514/temperature
 ```
 
+You can specify the COM port to use with the `-p` flag or the `ESPPORT` environment variable.
+On MacOS you can run `ls -l /dev/cu.*` to list available COM devices.
+Note the time that you plug in the device and look for a corresponding timestamp.
 
 ## License
 
