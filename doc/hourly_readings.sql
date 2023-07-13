@@ -71,68 +71,35 @@ WHERE
 GROUP BY 1,2 ORDER BY 1,2
 ON CONFLICT(id, hour) DO UPDATE SET avg_humidity = EXCLUDED.avg_humidity;
 
--- WIND SPEED GUST (MAX)
-INSERT INTO wm_hourly_readings (id, hour, wind_speed_gust_mph)
+-- WIND AND RAIN
+INSERT INTO wm_hourly_readings (id, hour, rainfall_hour, rain_day, wind_speed_avg_mph, wind_speed_gust_mph, wind_speed_direction)
 SELECT
 	SPLIT_PART(topic, '/', 2)||'_'||to_char(date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt'), 'YYYYMMDDHH24') as id,
 	date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') as hour,
-	max(text::float) AS wind_speed_gust_mph
-FROM journal
-WHERE 
-	topic = 'iot/pico/wind_speed_gust_mph'
-	AND text::float < 118 AND text::float > -118 -- weed out outliers/erroneous readings
-	AND date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') = date_trunc('hour', current_timestamp AT TIME ZONE 'cdt' - INTERVAL '1 hour')-- previous hour
-GROUP BY 1,2 ORDER BY 1,2
-ON CONFLICT(id, hour) DO UPDATE SET wind_speed_gust_mph = EXCLUDED.wind_speed_gust_mph;
-
--- WIND SPEED AVG (MAX/HOUR)
-INSERT INTO wm_hourly_readings (id, hour, wind_speed_avg_mph)
-SELECT
-	SPLIT_PART(topic, '/', 2)||'_'||to_char(date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt'), 'YYYYMMDDHH24') as id,
-	date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') as hour,
-	max(text::float) AS wind_speed_avg_mph
-FROM journal
-WHERE 
-	topic = 'iot/pico/wind_speed_avg_mph'
-	AND text::float < 118 AND text::float > -118 -- weed out outliers/erroneous readings
-	AND date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') = date_trunc('hour', current_timestamp AT TIME ZONE 'cdt' - INTERVAL '1 hour')-- previous hour
-GROUP BY 1,2 ORDER BY 1,2
-ON CONFLICT(id, hour) DO UPDATE SET wind_speed_avg_mph = EXCLUDED.wind_speed_avg_mph;
-
--- RAINFALL (HOUR) (MAX)
--- TODO: we are doing hourly aggregation in python also, let's see if doing max() makes sense here
-INSERT INTO wm_hourly_readings (id, hour, rainfall_hour)
-SELECT
-	SPLIT_PART(topic, '/', 2)||'_'||to_char(date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt'), 'YYYYMMDDHH24') as id,
-	date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') as hour,
-	max(text::float) AS rainfall_hour
-FROM journal
-WHERE 
-	topic = 'iot/pico/rain_in_hr'
-	AND text::float < 118 AND text::float > -118 -- weed out outliers/erroneous readings
-	AND date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') = date_trunc('hour', current_timestamp AT TIME ZONE 'cdt' - INTERVAL '1 hour')-- previous hour
-GROUP BY 1,2 ORDER BY 1,2
-ON CONFLICT(id, hour) DO UPDATE SET rainfall_hour = EXCLUDED.rainfall_hour;
-
--- WIND DIRECTION (MODE/MOST COMMON)
-INSERT INTO wm_hourly_readings (id, hour, wind_speed_direction)
-SELECT
-	SPLIT_PART(topic, '/', 2)||'_'||to_char(date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt'), 'YYYYMMDDHH24') as id,
-	date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') as hour,
+	max((data->'rain_hr'->'measurement')::float) AS rainfall_hour,
+	max((data->'rain_day'->'measurement')::float) AS rainfall_day,
+	max((data->'wind'->'speed_mph')::float) AS wind_speed_avg_mph,
+	max((data->'wind'->'gust_mph')::float) AS wind_speed_gust_mph,
 	mode() WITHIN GROUP (ORDER BY data->'wind'->'direction') AS wind_speed_direction
 FROM journal
-WHERE 
+WHERE
 	topic = 'iot/pico/readings_json'
 	--AND data->'wind' IS NOT null
 	AND date_trunc('hour', time::timestamptz AT TIME ZONE 'cdt') = date_trunc('hour', current_timestamp AT TIME ZONE 'cdt' - INTERVAL '1 hour')-- previous hour
 GROUP BY 1,2 ORDER BY 1,2
-ON CONFLICT(id, hour) DO UPDATE SET wind_speed_direction = EXCLUDED.wind_speed_direction;
+ON CONFLICT(id, hour) DO UPDATE SET
+  rainfall_hour = EXCLUDED.rainfall_hour,
+  rainfall_day = EXCLUDED.rainfall_day,
+  wind_speed_avg_mph = EXCLUDED.wind_speed_avg_mph,
+  wind_speed_gust_mph = EXCLUDED.wind_speed_gust_mph,
+  wind_speed_direction = EXCLUDED.wind_speed_direction;
 
 $BODY$;
-select wm_update_hourly_summaries();
+
 /*
+select wm_update_hourly_summaries();
 select mode() WITHIN GROUP (ORDER BY data->'wind'->'direction') AS wind_speed_direction from journal;
 select * from journal where left(topic,3)='iot' order by journal_id desc limit 15;
-select data->'wind'->'direction' from journal where left(topic,3)='iot'  /* and data->'wind' is not null */ order by journal_id desc limit 15;
+select data->'wind'->'direction' from journal where left(topic,3)='iot'  and data->'wind' is not null order by journal_id desc limit 15;
 SELECT * FROM wm_hourly_readings order by hour desc limit 2;
 */
