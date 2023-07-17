@@ -53,3 +53,7 @@ SELECT (current_date - INTERVAL '1 day')::date AS yesterday_date;
 
 SELECT (current_date - INTERVAL '2 month')::date AS month_ago_date;
 
+/* view for past 24 hours worth of hourly summaries */
+CREATE OR REPLACE VIEW public.wm_readings_24_hours AS
+SELECT id, hour, avg_temperature, avg_humidity, wind_speed_gust_mph, wind_speed_avg_mph, replace(wind_speed_direction, '"', '') as wind_speed_direction, rainfall_hour, rainfall_day
+	FROM public.wm_hourly_readings order by hour desc limit 24;
