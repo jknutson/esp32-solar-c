@@ -62,6 +62,26 @@ for further information about parasitic power mode, including strong pull-up con
 
 ADC1 is used as ADC2 is shared with WiFi, which is used in this application.
 
+### Monitoring
+
+You can use the `idf.py` tool to interact with and monitor the device:
+
+```
+idf.py monitor
+MQTT Published (polled temperature): yes
+raw voltage:  142 mV
+real voltage:  852 mV
+topic:  esp32/esp32_58EA84/voltage
+MQTT Published (polled voltage): yes
+temperature (c): 23.875000
+temperature (f): 74.975000
+MQTT topic:  esp32/esp32_58EA84-28ffc69ca4160514/temperature
+```
+
+You can specify the COM port to use with the `-p` flag or the `ESPPORT` environment variable.
+On MacOS you can run `ls -l /dev/cu.*` to list available COM devices.
+Note the time that you plug in the device and look for a corresponding timestamp.
+
 ## License
 
 The code in this project is licensed under the MIT license - see LICENSE for details.
@@ -70,6 +90,7 @@ The code in this project is licensed under the MIT license - see LICENSE for det
 
  * [DS18B20 Datasheet](http://datasheets.maximintegrated.com/en/ds/DS18B20.pdf)
  * [Espressif IoT Development Framework for ESP32](https://github.com/espressif/esp-idf)
+ * [mqtt-pg-logger](https://github.com/rosenloecher-it/mqtt-pg-logger)
 
 ## Acknowledgements
 
